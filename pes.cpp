@@ -1,6 +1,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include "pes.h"
+#include "es.h"
 
 #include "debug.h"
 
@@ -77,6 +78,7 @@ void PES::Analyze(BitBuffer &bits, bool video)
 	}
 	else
 	{
-		
+		MPEGAudioES es;
+		es.Analyze(bits);
 	}
 }
