@@ -84,8 +84,8 @@ public:
 		unsigned section_syntax_indicator     : 1; //固定为0x01
 		unsigned zero                         : 1; //0x01
 		unsigned reserved_1                   : 2; //0x03
-		unsigned section_length               : 12;//首先两位bit置为00，它指示段的byte数，由段长度域开始，包含CRC。
-		unsigned program_number               : 16;// 指出该节目对应于可应用的Program map PID
+		unsigned section_length               : 12;//表示从下一个字段开始到CRC32(含)之间有用的字节数
+		unsigned program_number               : 16;//指出该节目对应于可应用的Program map PID
 		unsigned reserved_2                   : 2; //0x03
 		unsigned version_number               : 5; //指出TS流中Program map section的版本号
 		unsigned current_next_indicator       : 1; //当该位置1时，当前传送的Program map section可用；
