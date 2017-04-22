@@ -93,16 +93,19 @@ void TsFile::PAT::Analyze(BitBuffer &bits)
 		}
 		else
 		{
-			PATProgram PAT_program;
-			PAT_program.program_map_PID = pid;
-			LOG_DEBUG("pmt pid=%u", PAT_program.program_map_PID);
-			PAT_program.program_number = program_num;
-			program.push_back(PAT_program);
+			PATProgram program;
+			program.program_map_PID = pid;
+			program.program_number = program_num;
+			LOG_WARN("pmt pid=%u,program_number=%u",
+				program.program_map_PID,
+				program.program_number);
+			vecProgram.push_back(program);
 		}
 	}
 
 	CRC_32 = bits.GetByte(4);
-	Dump();
+	LOG_WARN("PAT CRC %x", CRC_32);
+	//Dump();
 }
 
 void TsFile::PAT::Dump()
@@ -114,6 +117,73 @@ void TsFile::PAT::Dump()
 		"section_number=%u,"
 		"last_section_number=%u,",
 		section_syntax_indicator, transport_stream_id,
+		version_number,
+		current_next_indicator,
+		section_number,
+		last_section_number);
+}
+
+void TsFile::PMT::Analyze(BitBuffer &bits)
+{
+	table_id = bits.GetByte(1);
+	section_syntax_indicator = bits.GetOneBit();
+	zero = bits.GetOneBit();
+	reserved_1 = bits.GetBit(2);
+	section_length = bits.GetBit(12);
+	program_number = bits.GetByte(2);
+	reserved_2 = bits.GetBit(2);
+	version_number = bits.GetBit(5);
+	current_next_indicator = bits.GetOneBit();
+	section_number = bits.GetByte(1);
+	last_section_number = bits.GetByte(1);
+	reserved_3 = bits.GetBit(3);
+	PCR_PID = bits.GetBit(13);
+	reserved_4 = bits.GetBit(4);
+	program_info_length = bits.GetBit(12);
+
+	if (program_info_length > 0)
+	{
+		for (unsigned i = 0; i < program_info_length; i++)
+		{
+			bits.GetByte(1);
+		}
+	}
+
+	LOG_INFO("section_length=%u,program_info_length=%u", section_length, program_info_length);
+
+	//9 is program_number->program_info_length, 4 is CRC32
+	for (unsigned i = 0; i < section_length - 9 - program_info_length - 4;)
+	{
+		PMTStream stream;
+		stream.stream_type = bits.GetByte(1);
+		reserved_5 = bits.GetBit(3);
+		stream.elementary_PID = bits.GetBit(13);
+		reserved_6 = bits.GetBit(4);
+		stream.ES_info_length = bits.GetBit(12);
+		stream.descriptor = 0;
+		for (unsigned j = 0; j < stream.ES_info_length; j++)
+		{
+			stream.descriptor |= bits.GetByte(1);
+		}
+		LOG_WARN("PMT %u,type=%u", stream.elementary_PID, stream.stream_type);
+		vecStream.push_back(stream);
+
+		i += 5 + stream.ES_info_length;
+	}
+
+	CRC_32 = bits.GetByte(4);
+	LOG_WARN("PMT CRC %x", CRC_32);
+	Dump();
+}
+
+void TsFile::PMT::Dump()
+{
+	LOG_DEBUG("program_number=%u,"
+		"version_number=%u,"
+		"current_next_indicator=%u,"
+		"section_number=%u,"
+		"last_section_number=%u,",
+		program_number,
 		version_number,
 		current_next_indicator,
 		section_number,
@@ -159,6 +229,18 @@ bool TsFile::ReadPacket()
 	return false;
 }
 
+bool TsFile::IsPMT(unsigned pid) const
+{
+	for (unsigned i = 0; i < mPAT.vecProgram.size(); i++)
+	{
+		if (mPAT.vecProgram[i].program_map_PID == pid)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 bool TsFile::AnalyzePacket()
 {
 	PacketHeader header;
@@ -169,6 +251,13 @@ bool TsFile::AnalyzePacket()
 	{
 		//PAT
 		mPAT.Analyze(mBits);
+	}
+	else
+	{
+		if (IsPMT(header.pid))
+		{
+			mPMT.Analyze(mBits);
+		}
 	}
 	return true;
 }
