@@ -83,6 +83,61 @@ void TsFile::PacketHeader::Dump()
 		continuity_counter);
 }
 
+void TsFile::SDT::Analyze(BitBuffer &bits)
+{
+	table_id = bits.GetByte(1);
+	section_syntax_indicator = bits.GetOneBit();
+	reserved_1 = bits.GetOneBit();
+	reserved_2 = bits.GetBit(2);
+	section_length = bits.GetBit(12);
+
+	transport_stream_id = bits.GetByte(2);
+
+	reserved_3 = bits.GetBit(2);
+	version_number = bits.GetBit(5);
+	current_next_indicator = bits.GetOneBit();
+	section_number = bits.GetByte(1);
+	last_section_number = bits.GetByte(1);
+	original_network_id = bits.GetByte(2);
+	reserved_4 = bits.GetByte(1);
+	for (int i = 0; i < section_length - 8 - 4;)
+	{
+		SDTService service;
+		service.service_id = bits.GetByte(2);
+		bits.GetBit(6);
+		service.EIT_schedule_flag = bits.GetOneBit();
+		service.EIT_present_following_flag = bits.GetOneBit();
+		service.running_status = bits.GetBit(3);
+		service.freed_CA_mode = bits.GetOneBit();
+		service.descriptors_loop_length = bits.GetBit(12);
+		LOG_WARN("service.descriptors_loop_length=%u", service.descriptors_loop_length);
+		for (unsigned j = 0; j < service.descriptors_loop_length; j++)
+		{
+			service.descriptor.push_back(bits.GetByte(1));
+		}
+		i += 5 + service.descriptors_loop_length;
+	}
+
+	CRC_32 = bits.GetByte(4);
+	LOG_WARN("SDT CRC %x", CRC_32);
+	//Dump();
+}
+
+void TsFile::SDT::Dump()
+{
+	LOG_DEBUG("section_syntax_indicator=%u,"
+		"transport_stream_id=%u,"
+		"version_number=%u,"
+		"current_next_indicator=%u,"
+		"section_number=%u,"
+		"last_section_number=%u,",
+		section_syntax_indicator, transport_stream_id,
+		version_number,
+		current_next_indicator,
+		section_number,
+		last_section_number);
+}
+
 void TsFile::PAT::Analyze(BitBuffer &bits)
 {
 	table_id = bits.GetByte(1);
@@ -244,9 +299,9 @@ void TsFile::PMT::Analyze(BitBuffer &bits)
 	{
 		PMTStream stream;
 		stream.stream_type = bits.GetByte(1);
-		reserved_5 = bits.GetBit(3);
+		bits.GetBit(3);
 		stream.elementary_PID = bits.GetBit(13);
-		reserved_6 = bits.GetBit(4);
+		bits.GetBit(4);
 		stream.ES_info_length = bits.GetBit(12);
 		stream.descriptor = 0;
 		for (unsigned j = 0; j < stream.ES_info_length; j++)
@@ -340,6 +395,11 @@ bool TsFile::AnalyzePacket()
 	{
 		//PAT
 		mPAT.Analyze(mBits);
+	}
+	else if (header.pid == 0x11)
+	{
+		//SDT
+		mSDT.Analyze(mBits);
 	}
 	else
 	{
