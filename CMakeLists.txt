@@ -7,6 +7,7 @@ SET (SRC_FILES
 	main.cpp
 	buffer.cpp
 	ts.cpp
+	pes.cpp
 )
 
 include_directories(

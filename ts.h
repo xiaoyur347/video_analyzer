@@ -1,3 +1,6 @@
+#ifndef TS_H
+#define TS_H
+
 #include "buffer.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -275,3 +278,5 @@ private:
 	unsigned mVideoPid;
 	unsigned mAudioPid;
 };
+
+#endif

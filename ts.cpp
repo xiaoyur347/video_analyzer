@@ -1,6 +1,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include "ts.h"
+#include "pes.h"
 
 #include "debug.h"
 
@@ -39,6 +40,8 @@ void TsFile::AdaptionField::Analyze(BitBuffer &bits)
 	splicing_point_flag = bits.GetOneBit();
 	transport_private_data_flag = bits.GetOneBit();
 	adaption_field_extension_flag = bits.GetOneBit();
+
+	//optional
 	if (PCR_flag == 1)
 	{
 		PCR = bits.Get64BitByte(6); //48bits
@@ -47,7 +50,12 @@ void TsFile::AdaptionField::Analyze(BitBuffer &bits)
 	{
 		OPCR = bits.Get64BitByte(6); //48bits
 	}
-	LOG_INFO("PCR=%" PRIu64, PCR);
+	LOG_INFO("PCR[%u]=%" PRIx64, PCR_flag, PCR);
+	for (unsigned i = adaption_field_length - 1 - PCR_flag * 6 + OPCR_flag * 6;
+		i > 0; --i)
+	{
+		bits.GetByte(1);
+	}
 }
 
 const char *TsFile::PacketHeader::GetPidName() const
@@ -86,14 +94,7 @@ void TsFile::PacketHeader::Analyze(BitBuffer &bits)
 	adaptation_field_control = bits.GetBit(2);
 	continuity_counter = bits.GetBit(4);
 
-	if (adaptation_field_control == 1)
-	{
-		if (payload_unit_start_indicator == 1)
-		{
-			bits.GetByte(1);
-		}
-	}
-	else
+	if (adaptation_field_control != 1)
 	{
 		adaption = new AdaptionField();
 		adaption->Analyze(bits);
@@ -117,6 +118,8 @@ void TsFile::PacketHeader::Dump()
 
 void TsFile::SDT::Analyze(BitBuffer &bits)
 {
+	bits.GetByte(1); //skip 00
+
 	table_id = bits.GetByte(1);
 	section_syntax_indicator = bits.GetOneBit();
 	reserved_1 = bits.GetOneBit();
@@ -130,6 +133,7 @@ void TsFile::SDT::Analyze(BitBuffer &bits)
 	current_next_indicator = bits.GetOneBit();
 	section_number = bits.GetByte(1);
 	last_section_number = bits.GetByte(1);
+
 	original_network_id = bits.GetByte(2);
 	reserved_4 = bits.GetByte(1);
 	for (int i = 0; i < section_length - 8 - 4;)
@@ -199,6 +203,8 @@ void TsFile::SDT::Dump()
 
 void TsFile::PAT::Analyze(BitBuffer &bits)
 {
+	bits.GetByte(1); //skip 00
+
 	table_id = bits.GetByte(1);
 	section_syntax_indicator = bits.GetOneBit();
 	zero = bits.GetOneBit();
@@ -212,6 +218,7 @@ void TsFile::PAT::Analyze(BitBuffer &bits)
 	current_next_indicator = bits.GetOneBit();
 	section_number = bits.GetByte(1);
 	last_section_number = bits.GetByte(1);
+
 	//section_length = sizeof(transport_stream_id->last_section_number+PATProgram vector+CRC32)
 	//so, section_length = 5 + PATProgram vector + 4
 	for (int i = 0; i < section_length - 5 - 4; i+=4)
@@ -371,6 +378,8 @@ unsigned TsFile::PMT::GetAudioPid() const
 
 void TsFile::PMT::Analyze(BitBuffer &bits)
 {
+	bits.GetByte(1); //skip 00
+
 	table_id = bits.GetByte(1);
 	section_syntax_indicator = bits.GetOneBit();
 	zero = bits.GetOneBit();
@@ -382,6 +391,7 @@ void TsFile::PMT::Analyze(BitBuffer &bits)
 	current_next_indicator = bits.GetOneBit();
 	section_number = bits.GetByte(1);
 	last_section_number = bits.GetByte(1);
+
 	reserved_3 = bits.GetBit(3);
 	PCR_PID = bits.GetBit(13);
 	reserved_4 = bits.GetBit(4);
@@ -472,6 +482,7 @@ bool TsFile::ReadPacket()
 			return false;
 		}
 		mBits.Reset(mBuffer, TS_PACKET_SIZE);
+		printf("\n");
 		LOG_DEBUG("get packet %u", mPacket);
 		++mPacket;
 		return true;
@@ -510,10 +521,20 @@ bool TsFile::AnalyzePacket()
 	else if (mVideoPid != 0 && header.pid == mVideoPid)
 	{
 		LOG_WARN("Video frame");
+		if (header.payload_unit_start_indicator == 1)
+		{
+			PES pes;
+			pes.Analyze(mBits);
+		}
 	}
 	else if (mAudioPid != 0 && header.pid == mAudioPid)
 	{
 		LOG_WARN("Audio frame");
+		if (header.payload_unit_start_indicator == 1)
+		{
+			PES pes;
+			pes.Analyze(mBits);
+		}
 	}
 	else
 	{
