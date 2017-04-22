@@ -128,6 +128,7 @@ public:
 		}
 		void Analyze(BitBuffer &bits);
 		void Dump();
+		const char *GetTypeName(unsigned type) const;
 	};
 	explicit TsFile(int fd);
 	~TsFile();

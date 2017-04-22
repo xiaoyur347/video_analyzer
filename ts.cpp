@@ -5,6 +5,27 @@
 #include <string.h>
 #include <unistd.h>
 
+#define STREAM_TYPE_VIDEO_MPEG1     0x01
+#define STREAM_TYPE_VIDEO_MPEG2     0x02
+#define STREAM_TYPE_AUDIO_MPEG1     0x03
+#define STREAM_TYPE_AUDIO_MPEG2     0x04
+#define STREAM_TYPE_PRIVATE_SECTION 0x05
+#define STREAM_TYPE_PRIVATE_DATA    0x06
+#define STREAM_TYPE_AUDIO_AAC       0x0f
+#define STREAM_TYPE_AUDIO_AAC_LATM  0x11
+#define STREAM_TYPE_VIDEO_MPEG4     0x10
+#define STREAM_TYPE_METADATA        0x15
+#define STREAM_TYPE_VIDEO_H264      0x1b
+#define STREAM_TYPE_VIDEO_HEVC      0x24
+#define STREAM_TYPE_VIDEO_CAVS      0x42
+#define STREAM_TYPE_VIDEO_VC1       0xea
+#define STREAM_TYPE_VIDEO_DIRAC     0xd1
+
+#define STREAM_TYPE_AUDIO_AC3       0x81
+#define STREAM_TYPE_AUDIO_DTS       0x82
+#define STREAM_TYPE_AUDIO_TRUEHD    0x83
+#define STREAM_TYPE_AUDIO_EAC3      0x87
+
 const char *TsFile::PacketHeader::GetPidName() const
 {
 	switch (pid)
@@ -123,6 +144,72 @@ void TsFile::PAT::Dump()
 		last_section_number);
 }
 
+const char *TsFile::PMT::GetTypeName(unsigned type) const
+{
+	const char *name = "";
+	switch (type)
+	{
+		case STREAM_TYPE_VIDEO_MPEG1:
+			name = "[video]mpeg1";
+			break;
+		case STREAM_TYPE_VIDEO_MPEG2:
+			name = "[video]mpeg2";
+			break;
+		case STREAM_TYPE_AUDIO_MPEG1:
+			name = "[audio]mp1";
+			break;
+		case STREAM_TYPE_AUDIO_MPEG2:
+			name = "[audio]mp2";
+			break;
+		case STREAM_TYPE_PRIVATE_SECTION:
+			name = "private section";
+			break;
+		case STREAM_TYPE_PRIVATE_DATA:
+			name = "private data";
+			break;
+		case STREAM_TYPE_AUDIO_AAC:
+			name = "[audio]aac";
+			break;
+		case STREAM_TYPE_AUDIO_AAC_LATM:
+			name = "[audio]aac latm";
+			break;
+		case STREAM_TYPE_VIDEO_MPEG4:
+			name = "[video]mpeg4";
+			break;
+		case STREAM_TYPE_METADATA:
+			name = "metadata";
+			break;
+		case STREAM_TYPE_VIDEO_H264:
+			name = "[video]h264";
+			break;
+		case STREAM_TYPE_VIDEO_HEVC:
+			name = "[video]h265";
+			break;
+		case STREAM_TYPE_VIDEO_CAVS:
+			name = "[video]cavs";
+			break;
+		case STREAM_TYPE_VIDEO_VC1:
+			name = "[video]vc1";
+			break;
+		case STREAM_TYPE_VIDEO_DIRAC:
+			name = "[video]dirac";
+			break;
+		case STREAM_TYPE_AUDIO_AC3:
+			name = "[audio]ac3";
+			break;
+		case STREAM_TYPE_AUDIO_DTS:
+			name = "[audio]dts";
+			break;
+		case STREAM_TYPE_AUDIO_TRUEHD:
+			name = "[audio]truehd";
+			break;
+		case STREAM_TYPE_AUDIO_EAC3:
+			name = "[audio]eac3";
+			break;
+	}
+	return name;
+}
+
 void TsFile::PMT::Analyze(BitBuffer &bits)
 {
 	table_id = bits.GetByte(1);
@@ -149,7 +236,8 @@ void TsFile::PMT::Analyze(BitBuffer &bits)
 		}
 	}
 
-	LOG_INFO("section_length=%u,program_info_length=%u", section_length, program_info_length);
+	LOG_INFO("PCR_PID=%u,section_length=%u,program_info_length=%u",
+		PCR_PID, section_length, program_info_length);
 
 	//9 is program_number->program_info_length, 4 is CRC32
 	for (unsigned i = 0; i < section_length - 9 - program_info_length - 4;)
@@ -165,7 +253,8 @@ void TsFile::PMT::Analyze(BitBuffer &bits)
 		{
 			stream.descriptor |= bits.GetByte(1);
 		}
-		LOG_WARN("PMT %u,type=%u", stream.elementary_PID, stream.stream_type);
+		LOG_WARN("PMT %u,type=%u,%s", stream.elementary_PID, stream.stream_type,
+			GetTypeName(stream.stream_type));
 		vecStream.push_back(stream);
 
 		i += 5 + stream.ES_info_length;
