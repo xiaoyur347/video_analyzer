@@ -27,6 +27,9 @@ public:
 		unsigned PES_extension_flag : 1;
 		unsigned PES_header_data_length : 8;
 
+		uint64_t PTS;
+		uint64_t DTS;
+
 		PacketHeader()
 			:packet_start_code_prefix(0),
 			 stream_id(0),
@@ -44,7 +47,9 @@ public:
 			 additional_copy_info_flag(0),
 			 PES_CRC_flag(0),
 			 PES_extension_flag(0),
-			 PES_header_data_length(0)
+			 PES_header_data_length(0),
+			 PTS(0),
+			 DTS(0)
 		{
 
 		}
