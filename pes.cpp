@@ -67,8 +67,16 @@ void PES::PacketHeader::Analyze(BitBuffer &bits)
 		stream_id, PTS_DTS_flags, PTS, DTS);
 }
 
-void PES::Analyze(BitBuffer &bits)
+void PES::Analyze(BitBuffer &bits, bool video)
 {
 	PacketHeader header;
 	header.Analyze(bits);
+	if (video)
+	{
+
+	}
+	else
+	{
+		
+	}
 }

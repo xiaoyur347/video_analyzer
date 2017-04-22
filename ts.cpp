@@ -55,7 +55,7 @@ void TsFile::AdaptionField::Analyze(BitBuffer &bits)
 		OPCR += bits.GetBit(9); //extension
 	}
 	LOG_DEBUG("PCR[%u]=%" PRIu64, PCR_flag, PCR);
-	bits.SkipBit(adaption_field_length - 1 - PCR_flag * 6 + OPCR_flag * 6);
+	bits.SkipByte(adaption_field_length - 1 - PCR_flag * 6 + OPCR_flag * 6);
 }
 
 const char *TsFile::PacketHeader::GetPidName() const
@@ -533,7 +533,7 @@ bool TsFile::AnalyzePacket()
 		if (header.payload_unit_start_indicator == 1)
 		{
 			PES pes;
-			pes.Analyze(mBits);
+			pes.Analyze(mBits, true);
 		}
 	}
 	else if (mAudioPid != 0 && header.pid == mAudioPid)
@@ -542,7 +542,7 @@ bool TsFile::AnalyzePacket()
 		if (header.payload_unit_start_indicator == 1)
 		{
 			PES pes;
-			pes.Analyze(mBits);
+			pes.Analyze(mBits, false);
 		}
 	}
 	else
