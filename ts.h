@@ -147,7 +147,7 @@ public:
 			CRC_32(0)
 		{
 		}
-		void Analyze(BitBuffer &bits);
+		void Analyze(BitBuffer &bits, unsigned payload);
 		void Dump();
 	};
 	struct PATProgram
@@ -192,7 +192,7 @@ public:
 		{
 
 		}
-		void Analyze(BitBuffer &bits);
+		void Analyze(BitBuffer &bits, unsigned payload);
 		void Dump();
 	};
 	struct PMTStream
@@ -250,7 +250,7 @@ public:
 		{
 
 		}
-		void Analyze(BitBuffer &bits);
+		void Analyze(BitBuffer &bits, unsigned payload);
 		void Dump();
 		const char *GetTypeName(unsigned type) const;
 		unsigned GetVideoPid() const;

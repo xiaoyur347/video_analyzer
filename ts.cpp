@@ -116,9 +116,12 @@ void TsFile::PacketHeader::Dump()
 		continuity_counter);
 }
 
-void TsFile::SDT::Analyze(BitBuffer &bits)
+void TsFile::SDT::Analyze(BitBuffer &bits, unsigned payload)
 {
-	bits.GetByte(1); //skip 00
+	if (payload)
+	{
+		bits.GetByte(1); //skip 00
+	}
 
 	table_id = bits.GetByte(1);
 	section_syntax_indicator = bits.GetOneBit();
@@ -201,9 +204,12 @@ void TsFile::SDT::Dump()
 		last_section_number);
 }
 
-void TsFile::PAT::Analyze(BitBuffer &bits)
+void TsFile::PAT::Analyze(BitBuffer &bits, unsigned payload)
 {
-	bits.GetByte(1); //skip 00
+	if (payload)
+	{
+		bits.GetByte(1); //skip 00
+	}
 
 	table_id = bits.GetByte(1);
 	section_syntax_indicator = bits.GetOneBit();
@@ -376,9 +382,12 @@ unsigned TsFile::PMT::GetAudioPid() const
 	return 0;
 }
 
-void TsFile::PMT::Analyze(BitBuffer &bits)
+void TsFile::PMT::Analyze(BitBuffer &bits, unsigned payload)
 {
-	bits.GetByte(1); //skip 00
+	if (payload)
+	{
+		bits.GetByte(1); //skip 00
+	}
 
 	table_id = bits.GetByte(1);
 	section_syntax_indicator = bits.GetOneBit();
@@ -511,12 +520,12 @@ bool TsFile::AnalyzePacket()
 	if (header.pid == 0)
 	{
 		//PAT
-		mPAT.Analyze(mBits);
+		mPAT.Analyze(mBits, header.payload_unit_start_indicator);
 	}
 	else if (header.pid == 0x11)
 	{
 		//SDT
-		mSDT.Analyze(mBits);
+		mSDT.Analyze(mBits, header.payload_unit_start_indicator);
 	}
 	else if (mVideoPid != 0 && header.pid == mVideoPid)
 	{
@@ -540,7 +549,7 @@ bool TsFile::AnalyzePacket()
 	{
 		if (IsPMT(header.pid))
 		{
-			mPMT.Analyze(mBits);
+			mPMT.Analyze(mBits, header.payload_unit_start_indicator);
 			mVideoPid = mPMT.GetVideoPid();
 			mAudioPid = mPMT.GetAudioPid();
 		}
