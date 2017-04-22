@@ -55,11 +55,7 @@ void TsFile::AdaptionField::Analyze(BitBuffer &bits)
 		OPCR += bits.GetBit(9); //extension
 	}
 	LOG_DEBUG("PCR[%u]=%" PRIu64, PCR_flag, PCR);
-	for (unsigned i = adaption_field_length - 1 - PCR_flag * 6 + OPCR_flag * 6;
-		i > 0; --i)
-	{
-		bits.GetByte(1);
-	}
+	bits.SkipBit(adaption_field_length - 1 - PCR_flag * 6 + OPCR_flag * 6);
 }
 
 const char *TsFile::PacketHeader::GetPidName() const
@@ -124,7 +120,8 @@ void TsFile::SDT::Analyze(BitBuffer &bits, unsigned payload)
 {
 	if (payload)
 	{
-		bits.GetByte(1); //skip 00
+		unsigned pointer_field = bits.GetByte(1); //skip 00
+		bits.SkipByte(pointer_field);
 	}
 
 	table_id = bits.GetByte(1);
@@ -212,7 +209,8 @@ void TsFile::PAT::Analyze(BitBuffer &bits, unsigned payload)
 {
 	if (payload)
 	{
-		bits.GetByte(1); //skip 00
+		unsigned pointer_field = bits.GetByte(1); //skip 00
+		bits.SkipByte(pointer_field);
 	}
 
 	table_id = bits.GetByte(1);
@@ -390,7 +388,8 @@ void TsFile::PMT::Analyze(BitBuffer &bits, unsigned payload)
 {
 	if (payload)
 	{
-		bits.GetByte(1); //skip 00
+		unsigned pointer_field = bits.GetByte(1); //skip 00
+		bits.SkipByte(pointer_field);
 	}
 
 	table_id = bits.GetByte(1);
@@ -412,10 +411,7 @@ void TsFile::PMT::Analyze(BitBuffer &bits, unsigned payload)
 
 	if (program_info_length > 0)
 	{
-		for (unsigned i = 0; i < program_info_length; i++)
-		{
-			bits.GetByte(1);
-		}
+		bits.SkipByte(program_info_length);
 	}
 
 	LOG_INFO("PCR_PID=%u,section_length=%u,program_info_length=%u",

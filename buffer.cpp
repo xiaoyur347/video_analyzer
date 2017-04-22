@@ -90,3 +90,16 @@ uint64_t BitBuffer::Get64BitByte(unsigned byte)
 	}
 	return ret;
 }
+
+void BitBuffer::SkipBit(unsigned bits)
+{
+	if (bits != 0)
+	{
+		addBitOffset(bits);
+	}
+}
+
+void BitBuffer::SkipByte(unsigned byte)
+{
+	SkipBit(8 * byte);
+}

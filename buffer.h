@@ -12,6 +12,8 @@ public:
 	unsigned GetByte(unsigned byte);
 	uint64_t Get64BitBit(unsigned bits);
 	uint64_t Get64BitByte(unsigned byte);
+	void SkipBit(unsigned bits);
+	void SkipByte(unsigned byte);
 private:
 	void addBitOffset(unsigned bits);
 	unsigned getBit(unsigned bits);
