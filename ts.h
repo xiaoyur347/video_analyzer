@@ -1,4 +1,6 @@
 #include "buffer.h"
+#include <stdint.h>
+#include <stdlib.h>
 #include <vector>
 #include <string>
 
@@ -9,6 +11,44 @@ public:
 	{
 		TS_PACKET_SIZE = 188
 	};
+	struct AdaptionField
+	{
+		unsigned adaption_field_length         : 8;
+		unsigned discontinuity_indicator       : 1;
+		unsigned random_access_indicator       : 1;
+		unsigned elementary_stream_priority_indicator : 1;
+		unsigned PCR_flag                      : 1;
+		unsigned OPCR_flag                     : 1;
+		unsigned splicing_point_flag           : 1;
+		unsigned transport_private_data_flag   : 1;
+		unsigned adaption_field_extension_flag : 1;
+
+		//optional
+		uint64_t PCR;
+		uint64_t OPCR;
+		unsigned splice_countdown              : 8;
+		unsigned transport_private_data_length : 8;
+		std::vector<unsigned char> transport_private_data;
+		//adaption_extension
+
+		AdaptionField()
+			:adaption_field_length(0),
+			discontinuity_indicator(0),
+			random_access_indicator(0),
+			elementary_stream_priority_indicator(0),
+			PCR_flag(0),
+			OPCR_flag(0),
+			splicing_point_flag(0),
+			transport_private_data_flag(0),
+			adaption_field_extension_flag(0),
+			PCR(0),
+			OPCR(0),
+			splice_countdown(0),
+			transport_private_data_length(0)
+		{
+		}
+		void Analyze(BitBuffer &bits);
+	};
 	struct PacketHeader
 	{
 		unsigned sync_byte:8;
@@ -17,12 +57,36 @@ public:
 		unsigned payload_unit_start_indicator:1;
 		unsigned transport_priority:1;
 		unsigned pid:13;
-
-		//H->L transport_scrambling_control|adaptation_field_control|continuity_counter
 		unsigned transport_scrambling_control:2;
+		 //1 no
+		 //2,adaption
+		 //3,adaption + payload
 		unsigned adaptation_field_control:2;
 		unsigned continuity_counter:4;
 
+		AdaptionField *adaption;
+
+		PacketHeader()
+			:sync_byte(0),
+			transport_error_indicator(0),
+			payload_unit_start_indicator(0),
+			transport_priority(0),
+			pid(0),
+			transport_scrambling_control(0),
+			adaptation_field_control(0),
+			continuity_counter(0),
+			adaption(NULL)
+		{
+
+		}
+		~PacketHeader()
+		{
+			if (adaption != NULL)
+			{
+				delete adaption;
+				adaption = NULL;
+			}
+		}
 		const char *GetPidName() const;
 		void Analyze(BitBuffer &bits);
 		void Dump();
@@ -186,6 +250,8 @@ public:
 		void Analyze(BitBuffer &bits);
 		void Dump();
 		const char *GetTypeName(unsigned type) const;
+		unsigned GetVideoPid() const;
+		unsigned GetAudioPid() const;
 	};
 	explicit TsFile(int fd);
 	~TsFile();
@@ -205,4 +271,7 @@ private:
 	SDT mSDT;
 	PAT mPAT;
 	PMT mPMT; //sometimes maybe more than one
+
+	unsigned mVideoPid;
+	unsigned mAudioPid;
 };

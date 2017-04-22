@@ -1,3 +1,5 @@
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include "ts.h"
 
 #include "debug.h"
@@ -25,6 +27,28 @@
 #define STREAM_TYPE_AUDIO_DTS       0x82
 #define STREAM_TYPE_AUDIO_TRUEHD    0x83
 #define STREAM_TYPE_AUDIO_EAC3      0x87
+
+void TsFile::AdaptionField::Analyze(BitBuffer &bits)
+{
+	adaption_field_length = bits.GetByte(1);
+	discontinuity_indicator = bits.GetOneBit();
+	random_access_indicator = bits.GetOneBit();
+	elementary_stream_priority_indicator = bits.GetOneBit();
+	PCR_flag = bits.GetOneBit();
+	OPCR_flag = bits.GetOneBit();
+	splicing_point_flag = bits.GetOneBit();
+	transport_private_data_flag = bits.GetOneBit();
+	adaption_field_extension_flag = bits.GetOneBit();
+	if (PCR_flag == 1)
+	{
+		PCR = bits.Get64BitByte(6); //48bits
+	}
+	if (OPCR_flag == 1)
+	{
+		OPCR = bits.Get64BitByte(6); //48bits
+	}
+	LOG_INFO("PCR=%" PRIu64, PCR);
+}
 
 const char *TsFile::PacketHeader::GetPidName() const
 {
@@ -62,9 +86,17 @@ void TsFile::PacketHeader::Analyze(BitBuffer &bits)
 	adaptation_field_control = bits.GetBit(2);
 	continuity_counter = bits.GetBit(4);
 
-	if (payload_unit_start_indicator == 1)
+	if (adaptation_field_control == 1)
 	{
-		bits.GetByte(1);
+		if (payload_unit_start_indicator == 1)
+		{
+			bits.GetByte(1);
+		}
+	}
+	else
+	{
+		adaption = new AdaptionField();
+		adaption->Analyze(bits);
 	}
 }
 
@@ -110,7 +142,7 @@ void TsFile::SDT::Analyze(BitBuffer &bits)
 		service.running_status = bits.GetBit(3);
 		service.freed_CA_mode = bits.GetOneBit();
 		service.descriptors_loop_length = bits.GetBit(12);
-		LOG_WARN("service.descriptors_loop_length=%u", service.descriptors_loop_length);
+		//LOG_WARN("service.descriptors_loop_length=%u", service.descriptors_loop_length);
 #if 0
 		for (unsigned j = 0; j < service.descriptors_loop_length; j++)
 		{
@@ -146,7 +178,7 @@ void TsFile::SDT::Analyze(BitBuffer &bits)
 	}
 
 	CRC_32 = bits.GetByte(4);
-	LOG_WARN("SDT CRC %x", CRC_32);
+	//LOG_WARN("SDT CRC %x", CRC_32);
 	//Dump();
 }
 
@@ -207,7 +239,7 @@ void TsFile::PAT::Analyze(BitBuffer &bits)
 	}
 
 	CRC_32 = bits.GetByte(4);
-	LOG_WARN("PAT CRC %x", CRC_32);
+	//LOG_WARN("PAT CRC %x", CRC_32);
 	//Dump();
 }
 
@@ -292,6 +324,51 @@ const char *TsFile::PMT::GetTypeName(unsigned type) const
 	return name;
 }
 
+unsigned TsFile::PMT::GetVideoPid() const
+{
+	if (vecStream.empty())
+	{
+		return 0;
+	}
+	for (unsigned i = 0; i < vecStream.size(); i++)
+	{
+		switch (vecStream[i].stream_type) {
+			case STREAM_TYPE_VIDEO_MPEG1:
+			case STREAM_TYPE_VIDEO_MPEG2:
+			case STREAM_TYPE_VIDEO_MPEG4:
+			case STREAM_TYPE_VIDEO_H264:
+			case STREAM_TYPE_VIDEO_HEVC:
+			case STREAM_TYPE_VIDEO_CAVS:
+			case STREAM_TYPE_VIDEO_VC1:
+			case STREAM_TYPE_VIDEO_DIRAC:
+				return vecStream[i].elementary_PID;
+		}
+	}
+	return 0;
+}
+unsigned TsFile::PMT::GetAudioPid() const
+{
+	if (vecStream.empty())
+	{
+		return 0;
+	}
+	for (unsigned i = 0; i < vecStream.size(); i++)
+	{
+		switch (vecStream[i].stream_type) {
+			case STREAM_TYPE_AUDIO_MPEG1:
+			case STREAM_TYPE_AUDIO_MPEG2:
+			case STREAM_TYPE_AUDIO_AAC:
+			case STREAM_TYPE_AUDIO_AAC_LATM:
+			case STREAM_TYPE_AUDIO_AC3:
+			case STREAM_TYPE_AUDIO_DTS:
+			case STREAM_TYPE_AUDIO_TRUEHD:
+			case STREAM_TYPE_AUDIO_EAC3:
+				return vecStream[i].elementary_PID;
+		}
+	}
+	return 0;
+}
+
 void TsFile::PMT::Analyze(BitBuffer &bits)
 {
 	table_id = bits.GetByte(1);
@@ -343,8 +420,8 @@ void TsFile::PMT::Analyze(BitBuffer &bits)
 	}
 
 	CRC_32 = bits.GetByte(4);
-	LOG_WARN("PMT CRC %x", CRC_32);
-	Dump();
+	//LOG_WARN("PMT CRC %x", CRC_32);
+	//Dump();
 }
 
 void TsFile::PMT::Dump()
@@ -363,7 +440,9 @@ void TsFile::PMT::Dump()
 
 TsFile::TsFile(int fd)
 	:mFd(fd),
-	 mPacket(0)
+	 mPacket(0),
+	 mVideoPid(0),
+	 mAudioPid(0)
 {
 	memset(mBuffer, 0, sizeof(mBuffer));
 }
@@ -428,11 +507,21 @@ bool TsFile::AnalyzePacket()
 		//SDT
 		mSDT.Analyze(mBits);
 	}
+	else if (mVideoPid != 0 && header.pid == mVideoPid)
+	{
+		LOG_WARN("Video frame");
+	}
+	else if (mAudioPid != 0 && header.pid == mAudioPid)
+	{
+		LOG_WARN("Audio frame");
+	}
 	else
 	{
 		if (IsPMT(header.pid))
 		{
 			mPMT.Analyze(mBits);
+			mVideoPid = mPMT.GetVideoPid();
+			mAudioPid = mPMT.GetAudioPid();
 		}
 	}
 	return true;

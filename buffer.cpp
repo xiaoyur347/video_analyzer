@@ -62,3 +62,13 @@ unsigned BitBuffer::GetByte(unsigned byte)
 {
 	return GetBit(byte * 8);
 }
+
+uint64_t BitBuffer::Get64BitByte(unsigned byte)
+{
+	uint64_t ret = 0;
+	for (unsigned i = 0; i < byte; ++i)
+	{
+		ret = ret << 8 | GetBit(8);
+	}
+	return ret;
+}

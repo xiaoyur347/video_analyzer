@@ -1,3 +1,4 @@
+#include <stdint.h>
 class BitBuffer
 {
 public:
@@ -6,6 +7,7 @@ public:
 	unsigned GetOneBit();
 	unsigned GetBit(unsigned bits);
 	unsigned GetByte(unsigned byte);
+	uint64_t Get64BitByte(unsigned byte);
 private:
 	void addBitOffset(unsigned bits);
 	unsigned getBit(unsigned bits);
