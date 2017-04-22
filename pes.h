@@ -8,7 +8,7 @@ class PES
 public:
 	struct PacketHeader
 	{
-		unsigned prefix : 24;
+		unsigned packet_start_code_prefix : 24;
 		unsigned stream_id : 8;
 		unsigned PES_packet_length : 16;
 		//optional
@@ -28,7 +28,7 @@ public:
 		unsigned PES_header_data_length : 8;
 
 		PacketHeader()
-			:prefix(0),
+			:packet_start_code_prefix(0),
 			 stream_id(0),
 			 PES_packet_length(0),
 			 marker_bits(0),

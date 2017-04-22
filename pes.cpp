@@ -4,10 +4,10 @@
 
 void PES::PacketHeader::Analyze(BitBuffer &bits)
 {
-	prefix = bits.GetByte(3);
-	if (prefix != 1)
+	packet_start_code_prefix = bits.GetByte(3);
+	if (packet_start_code_prefix != 1)
 	{
-		LOG_ERROR("Error prefix %u", prefix);
+		LOG_ERROR("Error prefix %u", packet_start_code_prefix);
 		return;
 	}
 	stream_id = bits.GetByte(1);
