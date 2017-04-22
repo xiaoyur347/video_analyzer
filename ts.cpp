@@ -10,11 +10,13 @@ const char *TsFile::PacketHeader::GetPidName() const
 	switch (pid)
 	{
 		case 0:
-			return "PAT";
+			return "PAT"; //important
 		case 1:
 			return "CAT";
 		case 2:
 			return "TSDT";
+		case 0x11:
+			return "SDT"; //important
 		case 0x12:
 			return "EIT,ST";
 		case 0x13:
@@ -26,12 +28,31 @@ const char *TsFile::PacketHeader::GetPidName() const
 	}
 }
 
+void TsFile::PacketHeader::Analyze(BitBuffer &bits)
+{
+	sync_byte = bits.GetByte(1);
+
+	transport_error_indicator = bits.GetOneBit();
+	payload_unit_start_indicator = bits.GetOneBit();
+	transport_priority = bits.GetOneBit();
+	pid = bits.GetBit(13);
+
+	transport_scrambling_control = bits.GetBit(2);
+	adaptation_field_control = bits.GetBit(2);
+	continuity_counter = bits.GetBit(4);
+
+	if (payload_unit_start_indicator == 1)
+	{
+		bits.GetByte(1);
+	}
+}
+
 void TsFile::PacketHeader::Dump()
 {
-	LOG_DEBUG("%sstart_indicator=%d,"
-		"%spid=(%s)%d,"
-		"%sadaptation_field_control=%d,"
-		"continuity_counter=%d",
+	LOG_DEBUG("%sstart_indicator=%u,"
+		"%spid=(%s)%u,"
+		"%sadaptation_field_control=%u,"
+		"continuity_counter=%u",
 		transport_error_indicator != 0 ? "error_indicator=1," : "",
 		payload_unit_start_indicator,
 		transport_priority != 0 ? "priority=1," : "",
@@ -39,6 +60,64 @@ void TsFile::PacketHeader::Dump()
 		transport_scrambling_control != 0 ? "scrambling_control=1," : "",
 		adaptation_field_control,
 		continuity_counter);
+}
+
+void TsFile::TS_PAT::Analyze(BitBuffer &bits)
+{
+	table_id = bits.GetByte(1);
+	section_syntax_indicator = bits.GetOneBit();
+	zero = bits.GetOneBit();
+	reserved_1 = bits.GetBit(2);
+	section_length = bits.GetBit(12);
+
+	transport_stream_id = bits.GetByte(2);
+
+	reserved_2 = bits.GetBit(2);
+	version_number = bits.GetBit(5);
+	current_next_indicator = bits.GetOneBit();
+	section_number = bits.GetByte(1);
+	last_section_number = bits.GetByte(1);
+	//section_length = sizeof(transport_stream_id->last_section_number+TS_PAT_Program vector+CRC32)
+	//so, section_length = 5 + TS_PAT_Program vector + 4
+	for (int i = 0; i < section_length - 5 - 4; i+=4)
+	{
+		unsigned program_num = bits.GetByte(2);
+		reserved_3 = bits.GetBit(3);
+
+		network_PID = 0;
+		unsigned pid = bits.GetBit(13);
+		if (program_num == 0)
+		{
+			network_PID = pid;
+			LOG_DEBUG("network_PID=%u", network_PID);
+		}
+		else
+		{
+			TS_PAT_Program PAT_program;
+			PAT_program.program_map_PID = pid;
+			LOG_DEBUG("pmt pid=%u", PAT_program.program_map_PID);
+			PAT_program.program_number = program_num;
+			program.push_back(PAT_program);
+		}
+	}
+
+	CRC_32 = bits.GetByte(4);
+	Dump();
+}
+
+void TsFile::TS_PAT::Dump()
+{
+	LOG_DEBUG("section_syntax_indicator=%u,"
+		"transport_stream_id=%u,"
+		"version_number=%u,"
+		"current_next_indicator=%u,"
+		"section_number=%u,"
+		"last_section_number=%u,",
+		section_syntax_indicator, transport_stream_id,
+		version_number,
+		current_next_indicator,
+		section_number,
+		last_section_number);
 }
 
 TsFile::TsFile(int fd)
@@ -73,7 +152,7 @@ bool TsFile::ReadPacket()
 			return false;
 		}
 		mBits.Reset(mBuffer, TS_PACKET_SIZE);
-		LOG_DEBUG("get packet %d", mPacket);
+		LOG_DEBUG("get packet %u", mPacket);
 		++mPacket;
 		return true;
 	}
@@ -83,67 +162,14 @@ bool TsFile::ReadPacket()
 bool TsFile::AnalyzePacket()
 {
 	PacketHeader header;
-
-	header.sync_byte = mBits.GetByte(1);
-
-	header.transport_error_indicator = mBits.GetOneBit();
-	header.payload_unit_start_indicator = mBits.GetOneBit();
-	header.transport_priority = mBits.GetOneBit();
-	header.pid = mBits.GetBit(13);
-
-	header.transport_scrambling_control = mBits.GetBit(2);
-	header.adaptation_field_control = mBits.GetBit(2);
-	header.continuity_counter = mBits.GetBit(4);
+	header.Analyze(mBits);
 	header.Dump();
 
 	if (header.pid == 0)
 	{
 		//PAT
-		AnalyzePAT();
+		mPAT.Analyze(mBits);
 	}
-	return true;
-}
-
-bool TsFile::AnalyzePAT()
-{
-	TS_PAT packet;
-	packet.table_id = mBits.GetByte(1);
-	packet.section_syntax_indicator = mBits.GetOneBit();
-	packet.zero = mBits.GetOneBit();
-	packet.reserved_1 = mBits.GetBit(2);
-	packet.section_length = mBits.GetBit(12);
-
-	packet.transport_stream_id = mBits.GetByte(2);
-
-	packet.reserved_2 = mBits.GetBit(2);
-	packet.version_number = mBits.GetBit(5);
-	packet.current_next_indicator = mBits.GetOneBit();
-	packet.section_number = mBits.GetByte(1);
-	packet.last_section_number = mBits.GetByte(1);
-
-	for (int i = 0; i < packet.section_length; i++)
-	{
-		unsigned program_num = mBits.GetByte(2);
-		packet.reserved_3 = mBits.GetBit(3);
-
-		packet.network_PID = 0;
-		unsigned pid = mBits.GetBit(13);
-		if (program_num == 0)
-		{
-			packet.network_PID = pid;
-			LOG_DEBUG("network_PID=%u", packet.network_PID);
-		}
-		else
-		{
-			TS_PAT_Program PAT_program;
-			PAT_program.program_map_PID = pid;
-			PAT_program.program_number = program_num;
-			packet.program.push_back(PAT_program);
-		}
-	}
-
-	packet.CRC_32 = mBits.GetByte(4);
-
 	return true;
 }
 

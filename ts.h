@@ -23,6 +23,7 @@ public:
 		unsigned continuity_counter:4;
 
 		const char *GetPidName() const;
+		void Analyze(BitBuffer &bits);
 		void Dump();
 	};
 	struct TS_PAT_Program
@@ -48,12 +49,14 @@ public:
 		unsigned reserved_3                   : 3;  // 保留位
 		unsigned network_PID                  : 13; //网络信息表（NIT）的PID,节目号为0时对应的PID为network_PID
 		unsigned CRC_32                       : 32; //CRC32校验码
+
+		void Analyze(BitBuffer &bits);
+		void Dump();
 	};
 	explicit TsFile(int fd);
 	~TsFile();
 	bool ReadPacket();
 	bool AnalyzePacket();
-	bool AnalyzePAT();
 	int GetPacketNum() const
 	{
 		return mPacket;
@@ -63,4 +66,6 @@ private:
 	int mPacket;
 	unsigned char mBuffer[TS_PACKET_SIZE];
 	BitBuffer mBits;
+
+	TS_PAT mPAT;
 };
