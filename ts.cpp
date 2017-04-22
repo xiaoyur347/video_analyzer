@@ -44,13 +44,17 @@ void TsFile::AdaptionField::Analyze(BitBuffer &bits)
 	//optional
 	if (PCR_flag == 1)
 	{
-		PCR = bits.Get64BitByte(6); //48bits
+		PCR = bits.Get64BitBit(33); //33bits
+		bits.GetBit(6);
+		bits.GetBit(9); //extension
 	}
 	if (OPCR_flag == 1)
 	{
-		OPCR = bits.Get64BitByte(6); //48bits
+		OPCR = bits.Get64BitByte(6); //33bits
+		bits.GetBit(6);
+		bits.GetBit(9); //extension
 	}
-	LOG_INFO("PCR[%u]=%" PRIx64, PCR_flag, PCR);
+	LOG_DEBUG("PCR[%u]=%" PRIu64, PCR_flag, PCR);
 	for (unsigned i = adaption_field_length - 1 - PCR_flag * 6 + OPCR_flag * 6;
 		i > 0; --i)
 	{

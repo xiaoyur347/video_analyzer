@@ -63,6 +63,24 @@ unsigned BitBuffer::GetByte(unsigned byte)
 	return GetBit(byte * 8);
 }
 
+uint64_t BitBuffer::Get64BitBit(unsigned bits)
+{
+	uint64_t ret = 0;
+	while (bits > 0)
+	{
+		unsigned copy_bits = 8 - mCurrentBit;
+		if (bits < copy_bits)
+		{
+			copy_bits = bits;
+		}
+
+		ret = (ret << copy_bits) | getBit(copy_bits);
+		addBitOffset(copy_bits);
+		bits -= copy_bits;
+	}
+	return ret;
+}
+
 uint64_t BitBuffer::Get64BitByte(unsigned byte)
 {
 	uint64_t ret = 0;
