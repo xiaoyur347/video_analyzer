@@ -1,3 +1,19 @@
+# Project files
+.vscode
+
+# cmake
+CMakeCache.txt
+cmake_install.cmake
+CMakeFiles
+Makefile
+
+# bin
+video_analyzer
+
+# video
+*.ts
+*.ts.swp
+
 # Compiled Object files
 *.slo
 *.lo
