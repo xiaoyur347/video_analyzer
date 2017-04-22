@@ -1,5 +1,6 @@
 #include "buffer.h"
 #include <vector>
+#include <string>
 
 class TsFile
 {
@@ -34,7 +35,16 @@ public:
 		unsigned running_status               : 3;
 		unsigned freed_CA_mode                : 1;
 		unsigned descriptors_loop_length      : 12;
-		std::vector<unsigned char> descriptor;
+		//std::vector<unsigned char> descriptor;
+
+		//service descriptor expansion
+		unsigned descriptor_tag               : 8;
+		unsigned descriptor_length            : 8;
+		unsigned service_type                 : 8;
+		unsigned service_provider_name_length : 8;
+		std::string service_provider_name;
+		unsigned service_name_length : 8;
+		std::string service_name;
 	};
 	struct SDT
 	{

@@ -111,10 +111,37 @@ void TsFile::SDT::Analyze(BitBuffer &bits)
 		service.freed_CA_mode = bits.GetOneBit();
 		service.descriptors_loop_length = bits.GetBit(12);
 		LOG_WARN("service.descriptors_loop_length=%u", service.descriptors_loop_length);
+#if 0
 		for (unsigned j = 0; j < service.descriptors_loop_length; j++)
 		{
 			service.descriptor.push_back(bits.GetByte(1));
 		}
+#else
+		if (service.descriptors_loop_length > 0)
+		{
+			service.descriptor_tag = bits.GetByte(1);
+			service.descriptor_length = bits.GetByte(1);
+			service.service_type = bits.GetByte(1);
+			service.service_provider_name_length = bits.GetByte(1);
+			for (unsigned j = 0; j < service.service_provider_name_length; j++)
+			{
+				service.service_provider_name.append(1, (char)bits.GetByte(1));
+			}
+			service.service_name_length = bits.GetByte(1);
+			for (unsigned j = 0; j < service.service_name_length; j++)
+			{
+				service.service_name.append(1, (char)bits.GetByte(1));
+			}
+			LOG_INFO("tag=%x,length=%x,service_type=%u,provider=[%u]%s,name=[%u]%s",
+				service.descriptor_tag,
+				service.descriptor_length,
+				service.service_type,
+				service.service_provider_name_length,
+				service.service_provider_name.c_str(),
+				service.service_name_length,
+				service.service_name.c_str());
+		}
+#endif
 		i += 5 + service.descriptors_loop_length;
 	}
 
