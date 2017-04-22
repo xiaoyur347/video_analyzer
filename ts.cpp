@@ -62,7 +62,7 @@ void TsFile::PacketHeader::Dump()
 		continuity_counter);
 }
 
-void TsFile::TS_PAT::Analyze(BitBuffer &bits)
+void TsFile::PAT::Analyze(BitBuffer &bits)
 {
 	table_id = bits.GetByte(1);
 	section_syntax_indicator = bits.GetOneBit();
@@ -77,8 +77,8 @@ void TsFile::TS_PAT::Analyze(BitBuffer &bits)
 	current_next_indicator = bits.GetOneBit();
 	section_number = bits.GetByte(1);
 	last_section_number = bits.GetByte(1);
-	//section_length = sizeof(transport_stream_id->last_section_number+TS_PAT_Program vector+CRC32)
-	//so, section_length = 5 + TS_PAT_Program vector + 4
+	//section_length = sizeof(transport_stream_id->last_section_number+PATProgram vector+CRC32)
+	//so, section_length = 5 + PATProgram vector + 4
 	for (int i = 0; i < section_length - 5 - 4; i+=4)
 	{
 		unsigned program_num = bits.GetByte(2);
@@ -93,7 +93,7 @@ void TsFile::TS_PAT::Analyze(BitBuffer &bits)
 		}
 		else
 		{
-			TS_PAT_Program PAT_program;
+			PATProgram PAT_program;
 			PAT_program.program_map_PID = pid;
 			LOG_DEBUG("pmt pid=%u", PAT_program.program_map_PID);
 			PAT_program.program_number = program_num;
@@ -105,7 +105,7 @@ void TsFile::TS_PAT::Analyze(BitBuffer &bits)
 	Dump();
 }
 
-void TsFile::TS_PAT::Dump()
+void TsFile::PAT::Dump()
 {
 	LOG_DEBUG("section_syntax_indicator=%u,"
 		"transport_stream_id=%u,"
