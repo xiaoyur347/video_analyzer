@@ -532,8 +532,27 @@ bool TsFile::AnalyzePacket()
 		LOG_WARN("Video frame");
 		if (header.payload_unit_start_indicator == 1)
 		{
-			PES pes;
-			pes.Analyze(mBits, true);
+			if (!mVideoBuffer.empty())
+			{
+				//delay the analyze
+				PES pes;
+				BitBuffer bits;
+				LOG_WARN("last video pes %u", (unsigned)mVideoBuffer.size());
+				bits.Reset(&mVideoBuffer[0], mVideoBuffer.size());
+				pes.Analyze(bits, true);
+			}
+			mVideoBuffer.clear();
+			while (!mBits.IsEmpty())
+			{
+				mVideoBuffer.push_back(mBits.GetByte(1));
+			}
+		}
+		else
+		{
+			while (!mBits.IsEmpty())
+			{
+				mVideoBuffer.push_back(mBits.GetByte(1));
+			}
 		}
 	}
 	else if (mAudioPid != 0 && header.pid == mAudioPid)
@@ -541,8 +560,27 @@ bool TsFile::AnalyzePacket()
 		LOG_WARN("Audio frame");
 		if (header.payload_unit_start_indicator == 1)
 		{
-			PES pes;
-			pes.Analyze(mBits, false);
+			if (!mAudioBuffer.empty())
+			{
+				//delay the analyze
+				PES pes;
+				BitBuffer bits;
+				LOG_WARN("last audio pes %u", (unsigned)mAudioBuffer.size());
+				bits.Reset(&mAudioBuffer[0], mAudioBuffer.size());
+				pes.Analyze(bits, false);
+			}
+			mAudioBuffer.clear();
+			while (!mBits.IsEmpty())
+			{
+				mAudioBuffer.push_back(mBits.GetByte(1));
+			}
+		}
+		else
+		{
+			while (!mBits.IsEmpty())
+			{
+				mAudioBuffer.push_back(mBits.GetByte(1));
+			}
 		}
 	}
 	else

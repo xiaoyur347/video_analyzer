@@ -277,6 +277,8 @@ private:
 
 	unsigned mVideoPid;
 	unsigned mAudioPid;
+	std::vector<unsigned char> mVideoBuffer;
+	std::vector<unsigned char> mAudioBuffer;
 };
 
 #endif
