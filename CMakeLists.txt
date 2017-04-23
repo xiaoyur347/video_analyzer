@@ -8,6 +8,7 @@ SET (SRC_FILES
 	buffer.cpp
 
 	file.cpp
+	tcp.cpp
 
 	ts.cpp
 	pes.cpp

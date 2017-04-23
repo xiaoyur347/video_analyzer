@@ -8,6 +8,7 @@ public:
 	virtual int Open(const char *url) = 0;
 	virtual int Close() = 0;
 	virtual int Read(void *buffer, unsigned size) = 0;
+	virtual int Write(const void *buffer, unsigned size) = 0;
 };
 
 #endif

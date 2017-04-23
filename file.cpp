@@ -36,3 +36,8 @@ int File::Read(void *buffer, unsigned size)
 {
 	return read(mFd, buffer, size);
 }
+
+int File::Write(const void *buffer, unsigned size)
+{
+	return write(mFd, buffer, size); //0644 will avoid write
+}

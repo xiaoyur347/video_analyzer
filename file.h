@@ -11,6 +11,7 @@ public:
 	int Open(const char *url);
 	int Close();
 	int Read(void *buffer, unsigned size);
+	int Write(const void *buffer, unsigned size);
 private:
 	int mFd;
 };
