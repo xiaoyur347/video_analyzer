@@ -2,6 +2,7 @@
 #include <inttypes.h>
 #include "pes.h"
 #include "es.h"
+#include "type.h"
 
 #include "debug.h"
 
@@ -68,11 +69,11 @@ void PES::PacketHeader::Analyze(BitBuffer &bits)
 		stream_id, PTS_DTS_flags, PTS, DTS);
 }
 
-void PES::Analyze(BitBuffer &bits, bool video)
+void PES::Analyze(BitBuffer &bits, int stream_type)
 {
 	PacketHeader header;
 	header.Analyze(bits);
-	if (video)
+	if (stream_type == STREAM_TYPE_VIDEO_H264)
 	{
 		while (!bits.IsEmpty())
 		{
@@ -83,9 +84,18 @@ void PES::Analyze(BitBuffer &bits, bool video)
 			}
 		}
 	}
-	else
+	else if (stream_type == STREAM_TYPE_AUDIO_MPEG1)
 	{
 		MPEGAudioES es;
 		es.Analyze(bits);
+	}
+	else if (stream_type == STREAM_TYPE_AUDIO_AAC)
+	{
+		AACES es;
+		es.Analyze(bits);
+	}
+	else
+	{
+		LOG_ERROR("stream_type %u", stream_type);
 	}
 }

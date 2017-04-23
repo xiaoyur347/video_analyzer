@@ -2,32 +2,12 @@
 #include <inttypes.h>
 #include "ts.h"
 #include "pes.h"
+#include "type.h"
 
 #include "debug.h"
 
 #include <string.h>
 #include <unistd.h>
-
-#define STREAM_TYPE_VIDEO_MPEG1     0x01
-#define STREAM_TYPE_VIDEO_MPEG2     0x02
-#define STREAM_TYPE_AUDIO_MPEG1     0x03
-#define STREAM_TYPE_AUDIO_MPEG2     0x04
-#define STREAM_TYPE_PRIVATE_SECTION 0x05
-#define STREAM_TYPE_PRIVATE_DATA    0x06
-#define STREAM_TYPE_AUDIO_AAC       0x0f
-#define STREAM_TYPE_AUDIO_AAC_LATM  0x11
-#define STREAM_TYPE_VIDEO_MPEG4     0x10
-#define STREAM_TYPE_METADATA        0x15
-#define STREAM_TYPE_VIDEO_H264      0x1b
-#define STREAM_TYPE_VIDEO_HEVC      0x24
-#define STREAM_TYPE_VIDEO_CAVS      0x42
-#define STREAM_TYPE_VIDEO_VC1       0xea
-#define STREAM_TYPE_VIDEO_DIRAC     0xd1
-
-#define STREAM_TYPE_AUDIO_AC3       0x81
-#define STREAM_TYPE_AUDIO_DTS       0x82
-#define STREAM_TYPE_AUDIO_TRUEHD    0x83
-#define STREAM_TYPE_AUDIO_EAC3      0x87
 
 void TsFile::AdaptionField::Analyze(BitBuffer &bits)
 {
@@ -339,6 +319,37 @@ const char *TsFile::PMT::GetTypeName(unsigned type) const
 	return name;
 }
 
+bool TsFile::PMT::IsVideoStreamType(unsigned stream_type) const
+{
+	switch (stream_type) {
+		case STREAM_TYPE_VIDEO_MPEG1:
+		case STREAM_TYPE_VIDEO_MPEG2:
+		case STREAM_TYPE_VIDEO_MPEG4:
+		case STREAM_TYPE_VIDEO_H264:
+		case STREAM_TYPE_VIDEO_HEVC:
+		case STREAM_TYPE_VIDEO_CAVS:
+		case STREAM_TYPE_VIDEO_VC1:
+		case STREAM_TYPE_VIDEO_DIRAC:
+			return true;
+	}
+	return false;
+}
+bool TsFile::PMT::IsAudioStreamType(unsigned stream_type) const
+{
+	switch (stream_type) {
+		case STREAM_TYPE_AUDIO_MPEG1:
+		case STREAM_TYPE_AUDIO_MPEG2:
+		case STREAM_TYPE_AUDIO_AAC:
+		case STREAM_TYPE_AUDIO_AAC_LATM:
+		case STREAM_TYPE_AUDIO_AC3:
+		case STREAM_TYPE_AUDIO_DTS:
+		case STREAM_TYPE_AUDIO_TRUEHD:
+		case STREAM_TYPE_AUDIO_EAC3:
+			return true;
+	}
+	return false;
+}
+
 unsigned TsFile::PMT::GetVideoPid() const
 {
 	if (vecStream.empty())
@@ -347,16 +358,9 @@ unsigned TsFile::PMT::GetVideoPid() const
 	}
 	for (unsigned i = 0; i < vecStream.size(); i++)
 	{
-		switch (vecStream[i].stream_type) {
-			case STREAM_TYPE_VIDEO_MPEG1:
-			case STREAM_TYPE_VIDEO_MPEG2:
-			case STREAM_TYPE_VIDEO_MPEG4:
-			case STREAM_TYPE_VIDEO_H264:
-			case STREAM_TYPE_VIDEO_HEVC:
-			case STREAM_TYPE_VIDEO_CAVS:
-			case STREAM_TYPE_VIDEO_VC1:
-			case STREAM_TYPE_VIDEO_DIRAC:
-				return vecStream[i].elementary_PID;
+		if (IsVideoStreamType(vecStream[i].stream_type))
+		{
+			return vecStream[i].elementary_PID;
 		}
 	}
 	return 0;
@@ -369,16 +373,39 @@ unsigned TsFile::PMT::GetAudioPid() const
 	}
 	for (unsigned i = 0; i < vecStream.size(); i++)
 	{
-		switch (vecStream[i].stream_type) {
-			case STREAM_TYPE_AUDIO_MPEG1:
-			case STREAM_TYPE_AUDIO_MPEG2:
-			case STREAM_TYPE_AUDIO_AAC:
-			case STREAM_TYPE_AUDIO_AAC_LATM:
-			case STREAM_TYPE_AUDIO_AC3:
-			case STREAM_TYPE_AUDIO_DTS:
-			case STREAM_TYPE_AUDIO_TRUEHD:
-			case STREAM_TYPE_AUDIO_EAC3:
-				return vecStream[i].elementary_PID;
+		if (IsAudioStreamType(vecStream[i].stream_type))
+		{
+			return vecStream[i].elementary_PID;
+		}
+	}
+	return 0;
+}
+unsigned TsFile::PMT::GetVideoStreamType() const
+{
+	if (vecStream.empty())
+	{
+		return 0;
+	}
+	for (unsigned i = 0; i < vecStream.size(); i++)
+	{
+		if (IsVideoStreamType(vecStream[i].stream_type))
+		{
+			return vecStream[i].stream_type;
+		}
+	}
+	return 0;
+}
+unsigned TsFile::PMT::GetAudioStreamType() const
+{
+	if (vecStream.empty())
+	{
+		return 0;
+	}
+	for (unsigned i = 0; i < vecStream.size(); i++)
+	{
+		if (IsAudioStreamType(vecStream[i].stream_type))
+		{
+			return vecStream[i].stream_type;
 		}
 	}
 	return 0;
@@ -539,7 +566,7 @@ bool TsFile::AnalyzePacket()
 				BitBuffer bits;
 				LOG_WARN("last video pes %u", (unsigned)mVideoBuffer.size());
 				bits.Reset(&mVideoBuffer[0], mVideoBuffer.size());
-				pes.Analyze(bits, true);
+				pes.Analyze(bits, mVideoStreamType);
 			}
 			mVideoBuffer.clear();
 			while (!mBits.IsEmpty())
@@ -567,7 +594,7 @@ bool TsFile::AnalyzePacket()
 				BitBuffer bits;
 				LOG_WARN("last audio pes %u", (unsigned)mAudioBuffer.size());
 				bits.Reset(&mAudioBuffer[0], mAudioBuffer.size());
-				pes.Analyze(bits, false);
+				pes.Analyze(bits, mAudioStreamType);
 			}
 			mAudioBuffer.clear();
 			while (!mBits.IsEmpty())
@@ -590,6 +617,8 @@ bool TsFile::AnalyzePacket()
 			mPMT.Analyze(mBits, header.payload_unit_start_indicator);
 			mVideoPid = mPMT.GetVideoPid();
 			mAudioPid = mPMT.GetAudioPid();
+			mVideoStreamType = mPMT.GetVideoStreamType();
+			mAudioStreamType = mPMT.GetAudioStreamType();
 		}
 	}
 	return true;
@@ -601,7 +630,7 @@ void analyze_ts(int fd)
 	while (file.ReadPacket())
 	{
 		file.AnalyzePacket();
-		if (file.GetPacketNum() > 100)
+		if (file.GetPacketNum() > 1000)
 		{
 			break;
 		}

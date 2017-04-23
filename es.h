@@ -149,7 +149,7 @@ public:
 		unsigned bit_rate_index : 4;
 		unsigned sampling_frequency : 2; //kHz '00'=44.1 '01'=48 '10'=32
 		unsigned padding : 1;
-		unsigned privatea : 1;
+		unsigned private_bit : 1;
 		unsigned mode : 2; //'00'=Stereo '01'=joint stereo '10'=dual channel '11'=single channel
 		unsigned mode_extension : 2;
 		unsigned copyright : 1; //0=none 1=yes
@@ -164,7 +164,7 @@ public:
 			 bit_rate_index(0),
 			 sampling_frequency(0),
 			 padding(0),
-			 privatea(0),
+			 private_bit(0),
 			 mode(0),
 			 mode_extension(0),
 			 copyright(0),
@@ -176,6 +176,53 @@ public:
 		bool Analyze(BitBuffer &bits);
 	};
 
+	bool Analyze(BitBuffer &bits);
+};
+
+class AACES
+{
+public:
+	struct ADTSHeader
+	{
+		unsigned sync_word : 24;
+		//2 bytes
+		unsigned ID : 1;
+		unsigned layer : 2;
+		unsigned no_protection : 1;
+		unsigned profile : 2;
+		unsigned sampling_frequency_index : 4;
+		unsigned private_bit : 1;
+		unsigned channel_configuration : 3;
+		unsigned original_or_copy : 1;
+		unsigned home : 1;
+
+		unsigned copyright_identification_bit : 1;
+		unsigned copyright_identification_start : 1;
+		unsigned aac_frame_length : 13;
+		unsigned adts_buffer_fullness : 11;
+		unsigned number_of_raw_data_blocks_in_frame : 2;
+		ADTSHeader()
+			:sync_word(0),
+			ID(0),
+			layer(0),
+			no_protection(0),
+			profile(0),
+			sampling_frequency_index(0),
+			private_bit(0),
+			channel_configuration(0),
+			original_or_copy(0),
+			home(0),
+			copyright_identification_bit(0),
+			copyright_identification_start(0),
+			aac_frame_length(0),
+			adts_buffer_fullness(0),
+			number_of_raw_data_blocks_in_frame(0)
+		{
+
+		}
+		bool Analyze(BitBuffer &bits);
+		const char *GetSampleRate() const;
+	};
 	bool Analyze(BitBuffer &bits);
 };
 

@@ -255,6 +255,10 @@ public:
 		const char *GetTypeName(unsigned type) const;
 		unsigned GetVideoPid() const;
 		unsigned GetAudioPid() const;
+		unsigned GetVideoStreamType() const;
+		unsigned GetAudioStreamType() const;
+		bool IsVideoStreamType(unsigned stream_type) const;
+		bool IsAudioStreamType(unsigned stream_type) const;
 	};
 	explicit TsFile(int fd);
 	~TsFile();
@@ -277,6 +281,8 @@ private:
 
 	unsigned mVideoPid;
 	unsigned mAudioPid;
+	unsigned mVideoStreamType;
+	unsigned mAudioStreamType;
 	std::vector<unsigned char> mVideoBuffer;
 	std::vector<unsigned char> mAudioBuffer;
 };

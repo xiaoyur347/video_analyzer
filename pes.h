@@ -56,7 +56,7 @@ public:
 		void Analyze(BitBuffer &bits);
 	};
 
-	void Analyze(BitBuffer &bits, bool video);
+	void Analyze(BitBuffer &bits, int stream_type);
 };
 
 #endif

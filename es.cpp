@@ -277,7 +277,7 @@ bool MPEGAudioES::PacketHeader::Analyze(BitBuffer &bits)
 	bit_rate_index = bits.GetBit(4);
 	sampling_frequency = bits.GetBit(2);
 	padding = bits.GetOneBit();
-	privatea = bits.GetOneBit();
+	private_bit = bits.GetOneBit();
 	mode = bits.GetBit(2);
 	mode_extension = bits.GetBit(2);
 	copyright = bits.GetOneBit();
@@ -294,6 +294,64 @@ bool MPEGAudioES::PacketHeader::Analyze(BitBuffer &bits)
 bool MPEGAudioES::Analyze(BitBuffer &bits)
 {
 	PacketHeader header;
+	if (!header.Analyze(bits))
+	{
+		return false;
+	}
+	return true;
+}
+
+const char *AACES::ADTSHeader::GetSampleRate() const
+{
+	const char *table[] = {
+		"96000",
+		"88200",
+		"64000",
+		"48000",
+		"44100",
+		"32000",
+		"24000",
+		"22050",
+		"16000",
+		"12000",
+		"11025",
+		"8000",
+		"7350"
+	};
+	return table[sampling_frequency_index];
+}
+
+bool AACES::ADTSHeader::Analyze(BitBuffer &bits)
+{
+	sync_word = bits.GetBit(12);
+	if (sync_word != 0xfff)
+	{
+		LOG_ERROR("Error sync_word %u", sync_word);
+		return false;
+	}
+	ID = bits.GetOneBit();
+	layer = bits.GetBit(2);
+
+	no_protection = bits.GetOneBit();
+
+	profile = bits.GetBit(2);
+	sampling_frequency_index = bits.GetBit(4);
+	private_bit = bits.GetOneBit();
+	channel_configuration = bits.GetBit(3);
+	original_or_copy = bits.GetOneBit();
+	home = bits.GetOneBit();
+
+	LOG_WARN("ID=%s,layer=%u,profile=%u,sampling_frequency_index=%s Hz",
+		ID == 1 ? "mpeg2" : "mpeg4",
+		layer,
+		profile,
+	 	GetSampleRate());
+	return true;
+}
+
+bool AACES::Analyze(BitBuffer &bits)
+{
+	ADTSHeader header;
 	if (!header.Analyze(bits))
 	{
 		return false;
