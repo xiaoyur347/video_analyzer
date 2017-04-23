@@ -4,10 +4,10 @@
 
 bool FlvDemuxer::FlvHeader::Analyze(BitBuffer &bits)
 {
-	sync_byte = bits.GetByte(3);
-	if (sync_byte != 0x464c56)
+	signature = bits.GetByte(3);
+	if (signature != 0x464c56)
 	{
-		LOG_ERROR("Error sync_byte %u", sync_byte);
+		LOG_ERROR("Error signature %u", signature);
 		return false;
 	}
 
@@ -99,7 +99,7 @@ const char *FlvDemuxer::GetTagName(unsigned tag_type) const
 		case 9:
 			return "video";
 		case 0x12:
-			return "data";
+			return "metadata";
 		default:
 			return "unknown";
 	}
@@ -110,38 +110,80 @@ const char *FlvDemuxer::GetFrameType(unsigned frame_type) const
 	switch (frame_type)
 	{
 		case 1:
-			return "key";
+			return "key frame";
 		case 2:
-			return "not_key";
+			return "non-key frame";
 		case 3:
-			return "h263_not_key";
+			return "H.263 disposable frame";
 		case 4:
-			return "server_key";
+			return "generated key frame";
 		case 5:
-			return "info/command";
+			return "one byte frame seeking instruction";
 		default:
 			return "unknown";
 	}
 }
 
-const char *FlvDemuxer::GetCodecName(unsigned codec_id) const
+const char *FlvDemuxer::GetVideoCodecName(unsigned codec_id) const
 {
 	switch (codec_id)
 	{
+		case 0:
+			return "RGB";
 		case 1:
-			return "JPEG";
+			return "run-length";
 		case 2:
-			return "H263";
+			return "Sorenson's H.263";
 		case 3:
-			return "ScreenVideo";
+			return "Screen 1";
 		case 4:
-			return "VP6FLVVideo";
+			return "On2 TrueMotion VP6";
 		case 5:
-			return "VP6FLVAlphaVideo";
+			return "VP6 with alpha";
 		case 6:
-			return "ScreenV2Video";
+			return "Screen 2";
 		case 7:
-			return "AVC";
+			return "MP4 H.264";
+		case 8:
+			return "ITU H.263";
+		case 9:
+			return "MPEG-4 ASP";
+		default:
+			return "unknown";
+	}
+}
+
+const char *FlvDemuxer::GetAudioCodecName(unsigned codec_id) const
+{
+	//https://wuyuans.com/2012/08/flv-format/
+	switch (codec_id)
+	{
+		case 0:
+			return "native PCM";
+		case 1:
+			return "ADPCM";
+		case 2:
+			return "MP3";
+		case 3:
+			return "PCMLE";
+		case 4:
+			return "Nellymoser 16-kHz mono";
+		case 5:
+			return "Nellymoser 8-kHz mono";
+		case 6:
+			return "Nellymoser";
+		case 7:
+			return "ALAW";
+		case 8:
+			return "ULAW";
+		case 10:
+			return "AAC";
+		case 11:
+			return "SPEEX";
+		case 14:
+			return "MP3 8KHz";
+		case 15:
+			return "Device-specific sound";
 		default:
 			return "unknown";
 	}
@@ -184,11 +226,27 @@ bool FlvDemuxer::ReadPacket()
 		unsigned codec_id = mBits.GetBit(4);
 		LOG_WARN("frame_type=%u(%s),codec_id=%u(%s)",
 			frame_type, GetFrameType(frame_type),
-			codec_id, GetCodecName(codec_id));
+			codec_id, GetVideoCodecName(codec_id));
+		if (codec_id == 7)
+		{
+			unsigned avc_packet_type = mBits.GetByte(1);
+			unsigned composition_time = mBits.GetByte(3);
+			LOG_WARN("avc_packet_type=%u,composition_time=%u",
+				avc_packet_type,
+				composition_time);
+		}
 	}
 	else if (tag_type == 8)
 	{
-		//audio
+		//audio one byte head
+		unsigned codec_id = mBits.GetBit(4);
+		unsigned sampling_frequency_index = mBits.GetBit(2);
+		unsigned sampling_size = mBits.GetOneBit();
+		unsigned stereo = mBits.GetOneBit();
+		LOG_WARN("codec_id=%u(%s),sampling_frequency_index=%u,"
+			"sampling_size=%u,stereo=%u",
+			codec_id, GetAudioCodecName(codec_id),
+			sampling_frequency_index, sampling_size, stereo);
 	}
 
 	++mPacket;

@@ -10,7 +10,7 @@ class FlvDemuxer
 public:
 	struct FlvHeader
 	{
-		unsigned sync_byte : 24;
+		unsigned signature : 24;
 		unsigned version : 8;
 		unsigned type_flags_reversed1 : 5;
 		unsigned type_flags_audio : 1;
@@ -19,7 +19,7 @@ public:
 		unsigned data_offset;
 
 		FlvHeader()
-			:sync_byte(0),
+			:signature(0),
 			version(0),
 			type_flags_reversed1(0),
 			type_flags_audio(0),
@@ -46,7 +46,8 @@ private:
 	void SkipByte(unsigned size);
 	const char *GetTagName(unsigned tag_type) const;
 	const char *GetFrameType(unsigned frame_type) const;
-	const char *GetCodecName(unsigned codec_id) const;
+	const char *GetVideoCodecName(unsigned codec_id) const;
+	const char *GetAudioCodecName(unsigned codec_id) const;
 	IProtocol *mProtocol;
 	unsigned mPacket;
 
