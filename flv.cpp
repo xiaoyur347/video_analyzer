@@ -78,6 +78,18 @@ void FlvDemuxer::SkipByte(unsigned size)
 	}
 }
 
+void FlvDemuxer::ReadBuffer(unsigned size)
+{
+	mBuffer.clear();
+	for (;size > 0; --size)
+	{
+		unsigned char byte;
+		mProtocol->Read(&byte, 1);
+		mBuffer.push_back(byte);
+	}
+	mBits.Reset(&mBuffer[0], mBuffer.size());
+}
+
 const char *FlvDemuxer::GetTagName(unsigned tag_type) const
 {
 	switch (tag_type)
@@ -86,8 +98,50 @@ const char *FlvDemuxer::GetTagName(unsigned tag_type) const
 			return "audio";
 		case 9:
 			return "video";
-		case 12:
+		case 0x12:
 			return "data";
+		default:
+			return "unknown";
+	}
+}
+
+const char *FlvDemuxer::GetFrameType(unsigned frame_type) const
+{
+	switch (frame_type)
+	{
+		case 1:
+			return "key";
+		case 2:
+			return "not_key";
+		case 3:
+			return "h263_not_key";
+		case 4:
+			return "server_key";
+		case 5:
+			return "info/command";
+		default:
+			return "unknown";
+	}
+}
+
+const char *FlvDemuxer::GetCodecName(unsigned codec_id) const
+{
+	switch (codec_id)
+	{
+		case 1:
+			return "JPEG";
+		case 2:
+			return "H263";
+		case 3:
+			return "ScreenVideo";
+		case 4:
+			return "VP6FLVVideo";
+		case 5:
+			return "VP6FLVAlphaVideo";
+		case 6:
+			return "ScreenV2Video";
+		case 7:
+			return "AVC";
 		default:
 			return "unknown";
 	}
@@ -112,11 +166,30 @@ bool FlvDemuxer::ReadPacket()
 	unsigned int timestamp_extended = ReadByte(1);
 	unsigned int stream_id = ReadByte(3);
 
-	SkipByte(data_size);
-	LOG_INFO("tag_type=%u(%s),data_size=%u,timestamp=%u,"
-		"timestamp_extended=%u,stream_id=%u",
-		tag_type, GetTagName(tag_type), data_size, timestamp,
-		timestamp_extended, stream_id);
+	if (stream_id != 0)
+	{
+		LOG_ERROR("stream_id=%u", stream_id);
+	}
+
+	ReadBuffer(data_size);
+	LOG_INFO("tag_type=%s,data_size=%u,timestamp=%u,"
+		"timestamp_extended=%u",
+		GetTagName(tag_type), data_size, timestamp,
+		timestamp_extended);
+
+	if (tag_type == 9)
+	{
+		//video
+		unsigned frame_type = mBits.GetBit(4);
+		unsigned codec_id = mBits.GetBit(4);
+		LOG_WARN("frame_type=%u(%s),codec_id=%u(%s)",
+			frame_type, GetFrameType(frame_type),
+			codec_id, GetCodecName(codec_id));
+	}
+	else if (tag_type == 8)
+	{
+		//audio
+	}
 
 	++mPacket;
 

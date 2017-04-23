@@ -3,6 +3,7 @@
 
 #include "protocol.h"
 #include "buffer.h"
+#include <vector>
 
 class FlvDemuxer
 {
@@ -41,13 +42,17 @@ public:
 	void Run();
 private:
 	unsigned ReadByte(unsigned size);
+	void ReadBuffer(unsigned size);
 	void SkipByte(unsigned size);
 	const char *GetTagName(unsigned tag_type) const;
+	const char *GetFrameType(unsigned frame_type) const;
+	const char *GetCodecName(unsigned codec_id) const;
 	IProtocol *mProtocol;
 	unsigned mPacket;
 
 	BitBuffer mBits;
 	FlvHeader mHeader;
+	std::vector<unsigned char> mBuffer;
 };
 
 #endif
