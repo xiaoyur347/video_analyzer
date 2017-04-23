@@ -133,10 +133,46 @@ bool H264ES::SPS::Analyze(BitBuffer &bits)
 	return true;
 }
 
+const char *H264ES::Slice::GetSliceName() const
+{
+	switch (slice_type)
+	{
+		case 0:
+			return "P";
+		case 1:
+			return "B";
+		case 2:
+			return "I";
+		case 3:
+			return "SP";
+		case 4:
+			return "SI";
+		case 5:
+			return "P";
+		case 6:
+			return "B";
+		case 7:
+			return "I";
+		case 8:
+			return "SP";
+		case 9:
+			return "SI";
+		default:
+			return "unknown";
+	}
+}
+
+bool H264ES::Slice::Analyze(BitBuffer &bits)
+{
+	first_mb_in_slice = bits.GetUEV();
+	slice_type = bits.GetUEV();
+	LOG_ERROR("%u %s slice", slice_type, GetSliceName());
+	return true;
+}
+
 void H264ES::JumpToNaluHeader(BitBuffer &bits)
 {
 	bits.SkipTrailing();
-	bits.Dump();
 	while (!bits.IsEmpty())
 	{
 		unsigned temp = bits.GetByte(1);
@@ -201,6 +237,26 @@ bool H264ES::Analyze(BitBuffer &bits)
 	}
 	else if (header.nal_unit_type == 1)
 	{
+		Slice slice;
+		slice.Analyze(bits);
+		JumpToNaluHeader(bits);
+	}
+	else if (header.nal_unit_type == 2)
+	{
+		Slice slice;
+		slice.Analyze(bits);
+		JumpToNaluHeader(bits);
+	}
+	else if (header.nal_unit_type == 3)
+	{
+		Slice slice;
+		slice.Analyze(bits);
+		JumpToNaluHeader(bits);
+	}
+	else if (header.nal_unit_type == 4)
+	{
+		Slice slice;
+		slice.Analyze(bits);
 		JumpToNaluHeader(bits);
 	}
 	return true;

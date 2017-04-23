@@ -119,6 +119,20 @@ public:
 		}
 		bool Analyze(BitBuffer &bits);
 	};
+	struct Slice
+	{
+		unsigned first_mb_in_slice;
+		unsigned slice_type;
+
+		Slice()
+			:first_mb_in_slice(0),
+			slice_type(0)
+		{
+
+		}
+		bool Analyze(BitBuffer &bits);
+		const char *GetSliceName() const;
+	};
 	bool Analyze(BitBuffer &bits);
 	void JumpToNaluHeader(BitBuffer &bits);
 };
