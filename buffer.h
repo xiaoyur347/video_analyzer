@@ -14,6 +14,9 @@ public:
 	uint64_t Get64BitByte(unsigned byte);
 	void SkipBit(unsigned bits);
 	void SkipByte(unsigned byte);
+	bool IsEmpty() const;
+	unsigned GetUEV();
+	int GetSEV();
 private:
 	void addBitOffset(unsigned bits);
 	unsigned getBit(unsigned bits);

@@ -74,7 +74,14 @@ void PES::Analyze(BitBuffer &bits, bool video)
 	header.Analyze(bits);
 	if (video)
 	{
-
+		while (!bits.IsEmpty())
+		{
+			H264ES es;
+			if (!es.Analyze(bits))
+			{
+				break;
+			}
+		}
 	}
 	else
 	{

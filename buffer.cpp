@@ -103,3 +103,37 @@ void BitBuffer::SkipByte(unsigned byte)
 {
 	SkipBit(8 * byte);
 }
+
+bool BitBuffer::IsEmpty() const
+{
+	return mBitOffset >= mBits;
+}
+
+unsigned BitBuffer::GetUEV()
+{
+	int leadingZeroBits = -1;
+	unsigned b;
+	for (b = 0; b == 0; leadingZeroBits++)
+	{
+		b = GetBit(1);
+	}
+	if (leadingZeroBits == 0)
+	{
+		return 0;
+	}
+	return (2 << (leadingZeroBits - 1)) - 1 + GetBit(leadingZeroBits);
+}
+
+int BitBuffer::GetSEV()
+{
+	unsigned k = GetUEV();
+	if (k == 0)
+	{
+		return 0;
+	}
+	if (k % 2 == 0)
+	{
+		return -((k+1)/2);
+	}
+	return (k+1)/2;
+}
