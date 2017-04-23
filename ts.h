@@ -2,6 +2,7 @@
 #define TS_H
 
 #include "buffer.h"
+#include "protocol.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <vector>
@@ -260,7 +261,7 @@ public:
 		bool IsVideoStreamType(unsigned stream_type) const;
 		bool IsAudioStreamType(unsigned stream_type) const;
 	};
-	explicit TsFile(int fd);
+	explicit TsFile(IProtocol *protocol);
 	~TsFile();
 	bool ReadPacket();
 	bool AnalyzePacket();
@@ -270,7 +271,7 @@ public:
 		return mPacket;
 	}
 private:
-	int mFd;
+	IProtocol *mProtocol;
 	unsigned mPacket;
 	unsigned char mBuffer[TS_PACKET_SIZE];
 	BitBuffer mBits;

@@ -1,8 +1,8 @@
-#include <fcntl.h> //for open
-#include <unistd.h> //for close
 #include "debug.h"
+#include "file.h"
+#include <string.h>
 
-void analyze_ts(int fd);
+void analyze_ts(IProtocol *protocol);
 
 int main(int argc, char *argv[])
 {
@@ -10,13 +10,28 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
-	int fd = open(argv[1], 0644);
-	if (fd < 0)
+	const char *url = argv[1];
+	IProtocol *protocol = NULL;
+	if (strncmp(url, "/", 1) == 0 || strncmp(url, "~", 1) == 0
+		|| strncmp(url, ".", 1) == 0)
+	{
+		protocol = new File();
+	}
+
+	if (protocol == NULL)
+	{
+		return 2;
+	}
+	if (protocol->Open(argv[1]) < 0)
 	{
 		LOG_ERROR("open fail");
 		return 1;
 	}
-	analyze_ts(fd);
-	close(fd);
+	if (strstr(url, ".ts") != NULL)
+	{
+		analyze_ts(protocol);
+	}
+	protocol->Close();
+	delete protocol;
 	return 0;
 }

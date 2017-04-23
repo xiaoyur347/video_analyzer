@@ -484,8 +484,8 @@ void TsFile::PMT::Dump()
 		last_section_number);
 }
 
-TsFile::TsFile(int fd)
-	:mFd(fd),
+TsFile::TsFile(IProtocol *protocol)
+	:mProtocol(protocol),
 	 mPacket(0),
 	 mVideoPid(0),
 	 mAudioPid(0)
@@ -502,7 +502,7 @@ bool TsFile::ReadPacket()
 {
 	while (true)
 	{
-		int ret = read(mFd, mBuffer, 1);
+		int ret = mProtocol->Read(mBuffer, 1);
 		if (ret != 1)
 		{
 			return false;
@@ -512,7 +512,7 @@ bool TsFile::ReadPacket()
 		{
 			continue;
 		}
-		ret = read(mFd, mBuffer + 1, TS_PACKET_SIZE - 1);
+		ret = mProtocol->Read(mBuffer + 1, TS_PACKET_SIZE - 1);
 		if (ret != TS_PACKET_SIZE - 1)
 		{
 			return false;
@@ -624,9 +624,9 @@ bool TsFile::AnalyzePacket()
 	return true;
 }
 
-void analyze_ts(int fd)
+void analyze_ts(IProtocol* protocol)
 {
-	TsFile file(fd);
+	TsFile file(protocol);
 	while (file.ReadPacket())
 	{
 		file.AnalyzePacket();

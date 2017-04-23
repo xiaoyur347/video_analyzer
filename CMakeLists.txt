@@ -6,6 +6,9 @@ SET (CMAKE_CXX_FLAGS "-Wall -Wextra -Wshadow -g -O0")
 SET (SRC_FILES
 	main.cpp
 	buffer.cpp
+
+	file.cpp
+
 	ts.cpp
 	pes.cpp
 	es.cpp
