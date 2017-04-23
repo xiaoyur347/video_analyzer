@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "file.h"
+#include "flv.h"
 #include <string.h>
 
 void analyze_ts(IProtocol *protocol);
@@ -30,6 +31,11 @@ int main(int argc, char *argv[])
 	if (strstr(url, ".ts") != NULL)
 	{
 		analyze_ts(protocol);
+	}
+	else if (strstr(url, ".flv") != NULL)
+	{
+		FlvDemuxer demuxer(protocol);
+		demuxer.Run();
 	}
 	protocol->Close();
 	delete protocol;

@@ -13,6 +13,8 @@ SET (SRC_FILES
 	ts.cpp
 	pes.cpp
 	es.cpp
+
+	flv.cpp
 )
 
 include_directories(

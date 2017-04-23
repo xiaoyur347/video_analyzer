@@ -1,0 +1,53 @@
+#ifndef FLV_H
+#define FLV_H
+
+#include "protocol.h"
+#include "buffer.h"
+
+class FlvDemuxer
+{
+public:
+	struct FlvHeader
+	{
+		unsigned sync_byte : 24;
+		unsigned version : 8;
+		unsigned type_flags_reversed1 : 5;
+		unsigned type_flags_audio : 1;
+		unsigned type_flags_reversed2: 1;
+		unsigned type_flags_video : 1;
+		unsigned data_offset;
+
+		FlvHeader()
+			:sync_byte(0),
+			version(0),
+			type_flags_reversed1(0),
+			type_flags_audio(0),
+			type_flags_reversed2(0),
+			type_flags_video(0),
+			data_offset(0)
+		{
+		}
+
+		bool Analyze(BitBuffer &bits);
+	};
+	explicit FlvDemuxer(IProtocol *protocol);
+	~FlvDemuxer();
+	bool ReadHeader();
+	bool ReadPacket();
+	int GetPacketNum() const
+	{
+		return mPacket;
+	}
+	void Run();
+private:
+	unsigned ReadByte(unsigned size);
+	void SkipByte(unsigned size);
+	const char *GetTagName(unsigned tag_type) const;
+	IProtocol *mProtocol;
+	unsigned mPacket;
+
+	BitBuffer mBits;
+	FlvHeader mHeader;
+};
+
+#endif
