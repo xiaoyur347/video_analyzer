@@ -1,4 +1,5 @@
 #include "buffer.h"
+#include "debug.h"
 #include <stdlib.h>
 BitBuffer::BitBuffer()
 	:mBuffer(NULL),
@@ -24,6 +25,13 @@ void BitBuffer::Reset(unsigned char *buffer, unsigned size)
 void BitBuffer::addBitOffset(unsigned bits)
 {
 	mBitOffset += bits;
+	mCurrentByte = mBitOffset / 8;
+	mCurrentBit = mBitOffset % 8;
+}
+
+void BitBuffer::minusBitOffset(unsigned bits)
+{
+	mBitOffset -= bits;
 	mCurrentByte = mBitOffset / 8;
 	mCurrentBit = mBitOffset % 8;
 }
@@ -99,9 +107,25 @@ void BitBuffer::SkipBit(unsigned bits)
 	}
 }
 
+void BitBuffer::RewindBit(unsigned bits)
+{
+	if (bits != 0)
+	{
+		minusBitOffset(bits);
+	}
+}
+
 void BitBuffer::SkipByte(unsigned byte)
 {
 	SkipBit(8 * byte);
+}
+
+void BitBuffer::SkipTrailing()
+{
+	if (mBitOffset % 8 != 0)
+	{
+		addBitOffset(8 - (mBitOffset % 8));
+	}
 }
 
 bool BitBuffer::IsEmpty() const
@@ -136,4 +160,9 @@ int BitBuffer::GetSEV()
 		return -((k+1)/2);
 	}
 	return (k+1)/2;
+}
+
+void BitBuffer::Dump()
+{
+	LOG_INFO("mBitOffset=%u,%u:%u", mBitOffset, mCurrentByte, mCurrentBit);
 }
