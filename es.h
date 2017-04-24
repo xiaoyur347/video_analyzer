@@ -3,6 +3,7 @@
 
 #include "buffer.h"
 #include <vector>
+#include <string>
 
 class H264ES
 {
@@ -118,6 +119,8 @@ public:
 
 		}
 		bool Analyze(BitBuffer &bits);
+		const char *GetProfileName() const;
+		std::string GetLevelName() const;
 	};
 	struct Slice
 	{

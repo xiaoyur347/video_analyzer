@@ -488,7 +488,9 @@ TsFile::TsFile(IProtocol *protocol)
 	:mProtocol(protocol),
 	 mPacket(0),
 	 mVideoPid(0),
-	 mAudioPid(0)
+	 mAudioPid(0),
+	 mVideoStreamType(0),
+	 mAudioStreamType(0)
 {
 	memset(mBuffer, 0, sizeof(mBuffer));
 }

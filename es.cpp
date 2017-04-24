@@ -1,5 +1,6 @@
 #include "es.h"
 #include "debug.h"
+#include "type.h"
 
 bool H264ES::NalHeader::Analyze(BitBuffer &bits)
 {
@@ -66,6 +67,27 @@ const char *H264ES::NalHeader::GetName() const
 	return "undefined";
 }
 
+const char *H264ES::SPS::GetProfileName() const
+{
+	switch (profile_idc)
+	{
+		case FF_PROFILE_H264_HIGH:
+			return "HIGH";
+		case FF_PROFILE_H264_BASELINE:
+			return "BASELINE";
+		case FF_PROFILE_H264_MAIN:
+			return "MAIN";
+	}
+	return "unknown";
+}
+
+std::string H264ES::SPS::GetLevelName() const
+{
+	char szBuffer[16] = {0};
+	sprintf(szBuffer, "%u.%u", level_idc / 10, level_idc % 10);
+	return szBuffer;
+}
+
 bool H264ES::SPS::Analyze(BitBuffer &bits)
 {
 	profile_idc = bits.GetByte(1);
@@ -125,8 +147,8 @@ bool H264ES::SPS::Analyze(BitBuffer &bits)
 	}
 	vui_parameters_present_flag = bits.GetOneBit();
 
-	LOG_ERROR("profile=%u,level=%u,num_ref_frames=%u,width=%u,height=%u",
-		profile_idc, level_idc,
+	LOG_ERROR("profile=%u(%s),level=%u(%s),num_ref_frames=%u,width=%u,height=%u",
+		profile_idc, GetProfileName(), level_idc, GetLevelName().c_str(),
 		num_ref_frames,
 		(pic_width_in_mbs_minus1 + 1) * 16,
 		(pic_height_in_map_units_minus1 + 1) * 16);
