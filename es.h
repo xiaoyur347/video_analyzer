@@ -126,10 +126,12 @@ public:
 	{
 		unsigned first_mb_in_slice;
 		unsigned slice_type;
+		unsigned pic_parameter_set_id;
 
 		Slice()
 			:first_mb_in_slice(0),
-			slice_type(0)
+			slice_type(0),
+			pic_parameter_set_id(0)
 		{
 
 		}

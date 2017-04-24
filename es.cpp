@@ -107,6 +107,8 @@ bool H264ES::SPS::Analyze(BitBuffer &bits)
 		bit_depth_chroma_minus8 = bits.GetUEV();
 		qpprime_y_zero_transform_bypass_flag = bits.GetOneBit();
 		seq_scaling_matrix_present_flag = bits.GetOneBit();
+		LOG_WARN("chroma_format_idc=%u,bit_depth_luma_minus8=%u,bit_depth_chroma_minus8=%u",
+			chroma_format_idc, bit_depth_luma_minus8, bit_depth_chroma_minus8);
 	}
 
 	log2_max_frame_num_minus4 = bits.GetUEV();
@@ -188,6 +190,7 @@ bool H264ES::Slice::Analyze(BitBuffer &bits)
 {
 	first_mb_in_slice = bits.GetUEV();
 	slice_type = bits.GetUEV();
+	pic_parameter_set_id = bits.GetUEV();
 	LOG_ERROR("%u %s slice", slice_type, GetSliceName());
 	return true;
 }
@@ -255,6 +258,8 @@ bool H264ES::Analyze(BitBuffer &bits)
 	else if (header.nal_unit_type == 5)
 	{
 		//IDR
+		Slice slice;
+		slice.Analyze(bits);
 		JumpToNaluHeader(bits);
 	}
 	else if (header.nal_unit_type == 1)
